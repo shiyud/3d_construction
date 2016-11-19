@@ -1,0 +1,272 @@
+% Scribe template is a combination of 16831 and 10725. Thanks to those TAs!
+\documentclass[11pt]{article}
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{bm}
+\usepackage{epsfig}
+\usepackage[tight]{subfigure}
+\usepackage[framed,numbered,autolinebreaks,useliterate]{mcode}
+\usepackage{hyperref}
+
+\newcommand{\handout}[5]{
+  \noindent
+  \begin{center}
+  \framebox{
+    \vbox{
+      \hbox to 5.78in { {#1} \hfill #2 }
+      \vspace{4mm}
+      \hbox to 5.78in { {\Large \hfill #5  \hfill} }
+      \vspace{2mm}
+      \hbox to 5.78in { {\em #3 \hfill #4} }
+    }
+  }
+  \end{center}
+  \vspace*{4mm}
+}
+
+\newcommand{\lecture}[5]{\handout{#1}{#2}{#3}{#4}{#5}}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{observation}[theorem]{Observation}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{fact}[theorem]{Fact}
+\newtheorem{assumption}[theorem]{Assumption}
+
+% 1-inch margins, from fullpage.sty by H.Partl, Version 2, Dec. 15, 1988.
+\topmargin 0pt
+\advance \topmargin by -\headheight
+\advance \topmargin by -\headsep
+\textheight 8.9in
+\oddsidemargin 0pt
+\evensidemargin \oddsidemargin
+\marginparwidth 0.5in
+\textwidth 6.5in
+
+\parindent 0in
+%\parskip 1.5ex
+\renewcommand{\baselinestretch}{1.1}
+
+\begin{document}
+\newcommand{\defeq}[0]{\ensuremath{\stackrel{\triangle}{=}}}
+\def\x{\mathbf{x}}
+\def\w{\mathbf{w}}
+\def\K{\mathbf{K}}
+\lecture{{\bf 16-822}: Geometry-based Methods in Vision (F16) }{Released: October 23}{Lecturer: Martial Hebert}{TA: Nick Rhinehart}{Homework 2}
+
+
+\section{Theory (60 Points)}
+
+\subsection{Ambiguities in 2-views (15 Points)}
+Here, we explore cases in which there are ambiguities in recovering scene/camera geometry from multiple views. We show 
+this for the 2-view case, but the reasoning is similar in other problems.\\
+
+Consider the problem of estimating the fundamental matrix from a set of 8 correspondences $p_i,p'_i, i=1 \ldots 8$. We denote the image coordinates by $u$ and $v$. Writing the entries of $F$ as $F_{ij}$, the constraint for each correspondence is: $p'^TFp = 0$.
+\begin{itemize}
+\item Setting $F_{33} = 1$ (because $F$ is defined up to scale), show that this is equivalent to the set of 8 linear equations:
+$Af = -1_8$, where $1_8$ is the 8-vector of constant 1, $f = [F_{11} F_{12} \ldots F_{32}]^T$, and $A$ is the $8 \times 8$  matrix such that row $i$ of $A$ is: $[u'_iu_i\ u'_iv_i\ u'_i\ v'_iu_i\ v'_iv_i\ v'_i\ u_i\ v_i]$.
+
+\item The system is degenerate if $A$ is singular. Using the fact that a matrix is singular iff there exists a  non-trivial linear combination of its columns equal to zero, show that there exists a $3 \times 3$ matrix $Q$ such that, for every correspondence $i$:
+\begin{align*}
+p_i'^T Qp_i = 0
+\end{align*}
+\item Conclude that the eight points in space $P_i$ corresponding to the correspondences $p_i,p'_i$ must lie on a quadric surface in space. 
+\item Show that the optical centers $C$ and $C'$ of the two cameras lie on this quadric.
+\end{itemize}
+This shows that the 2-view recovery problem degenerates if the 8 points and the camera centers lie on a quadric.
+
+\subsection{Plane+Parallax (15 Points)}
+
+Consider a plane in space inducing a homography $H$ between two images (denoted by 1 and 2). For any correspondence between two points $p_1$ and $p_2$, the points $p_2$, $Hp_1$, and $e'$ are aligned, there exists a scalar ``projective'' depth relating the two.
+\begin{itemize}
+
+\item Show that, for any correspondence between two points $p_1$ and $p_2$, the points $p_2$, $Hp_1$, and $e'$ (the epipole in the second image) are aligned.
+
+\item Show that for any correspondence, there exists a scalar $r$ (the ``projective'' depth) such that: $p_2 = Hp_1 + re'$.
+
+\item Assume that the cameras are calibrated (you can then assume $K=I$; this is not essential but it simplifies the math). Let us assume that we create a new (virtual) image (denoted by 3) by applying the homography $H$ to the first image. In other words, 
+a pixel at position $p_1$ in the old image is related to a pixel at position $p_3$ in the new image by $p_3 = Hp_1$. Show that images 2 and 3
+are related by a pure translation. (Several ways of showing this. One possible approach is to manipulate the various equation to derive the
+epipolar relation $p_2^TEp_3 = 0$ and conclude by inspection that it is the epipolar geometry of a translation.)
+
+\item What is the translation vector between images 1 and 3\footnote{This is actually a powerful property. It basically says that there is equivalence between planar homography and rotations and that knowledge of one planar motion in the image is sufficient to ``remove'' the rotational component; something that can be used in image stabilization, for example.}? 
+\end{itemize} 
+
+\subsection{Calibration of a moving set of cameras (12 Points)}
+Let us assume that we have a set of (uncalibrated) cameras on a robot. We can generate a {\em projective} 
+reconstruction of the world from any position of the robot. We want to show that it is possible to generate a metric
+reconstruction (which means auto-calibration of the cameras) from two positions of the robot. In fact, we show here only that
+we can recover the plane at infinity from two robot positions; earlier results from class show how to complete the 
+auto-calibration once the plane at infinity is known.\\
+
+We denote by $P$ the coordinates of a point in the projective reconstruction at the first position of the robot, and 
+by $P'$ the coordinates at the second position. We denote by $H$ the $4 \times 4$ projective transformation between the 
+two reconstructions, i.e., for any point: $P' = HP$. We assume that $H$ is known (e.g., by looking at corresponding features 
+between the two robot positions). We denote by $Q$ the (unknown) correction matrix used to convert the projective 
+reconstructions to a Euclidean one: $P_o = QP$ and $P'_o = QP'$, where the subscript $_o$ indicates that the coordinates
+are expressed in the Euclidean reconstruction. Finally, we denote by $H_o$ the (unknown) Euclidean transformation 
+between the two reconstructions: $P'_0=H_0P_0$.
+
+\begin{itemize}
+
+\item Show that, if $v$ is an eigenvector of $H_o$, then $Q^{-1}v$ is an eigenvector of $H$ with the {\em same} eigenvalue.
+\item Show that, for any $4 \times 4$ Euclidean point transformation $T$ (i.e. $p' = Tp$) the plane at infinity is an eigenvector of 
+the corresponding plane transformation ($\pi' = T^*\pi$, for some $T^*$) with real eigenvalue
+ (in fact it is the only one with a real eigenvalue, but you don't need to prove that).
+\item Conclude that the plane at infinity $\pi_\infty$ is the eigenvector of $H^{-T}$ with real eigenvalues.
+This shows that $\pi_\infty$ can be computed given reconstructions at two different positions of the robot.
+
+\end{itemize}
+
+\subsection{The special matrix (18 Points)}
+
+Since ``fundamental'' and ``essential'' are not sufficient in the superlative category, one can also define 
+a ``special'' matrix $S$. Given two images with fundamental matrix $F$, and denoting the epipole in the second image by
+$e'$, the special matrix is defined as: $S = [e']_{\times}F$. 
+\begin{itemize}
+
+\item For this problem you need to use a handy formula from linear algebra: Given three 3-vectors $u,v,w$, the 
+double cross product is: $u \times (v \times w) = (u^Tw)v - (u^Tv)w$. Given that formula, generate an expression 
+for the matrix $[p]_{\times}^2$ for a point $p$ in the image plane.
+
+\item Show that we also have $F = [e']_{\times}S$ (as usual, all the equalities are projective, i.e., up-to-scale).
+
+\item Show that $S$ is singular (in fact, it is of rank 2).
+
+\item $S$ is a mapping from the first image to the second. Therefore there must be a plane $\Pi$ such that $S$ 
+is the homography induced by $\Pi$. Show that $\Pi$ contains the center $C'$ of the second image (and of course, the 
+corresponding mapping is degenerate).
+
+\item Show that $\Pi$ intersects the second image plane along the line represented by the vector $e'$ 
+(this line is sometimes denoted by $<e'>$).
+
+\item Show that, for any point $p$ in the first image, $Sp$ is the intersection of the epipolar line $l$ 
+corresponding to $p$ and the line $<e'>$.
+
+\end{itemize}
+
+\section{Implementation (40 Points, 10 bonus)}
+In this part of the homework, we explore the use of homographies for plane detection and 3D reconstruction. The motivation is that, in principle, using homographies will enable us to correctly reconstruct the planar surfaces and to enforce constraints such as orthogonality (if known). In contrast, using point matches, as the first step, makes it harder to correct the resulting noisy reconstruction later for planarity constraints. We explore these ideas on a few pairs of images of urban scenes, which
+contain lots of planar surfaces. You can use \underline{{\bf any method you prefer}} as long as it conforms to the descriptions below. The winning homework (we are not sure what (s)he will win, but . . .) is the one that has the
+correct math and 3D result with the smallest number of such manual designation of geometric constraints.
+
+
+\subsection{What you are supposed to do:}
+Without pre-calibrating the camera, you need to do two things:\\
+
+{\bf Step 1:} Segment the images into planar regions and compute the homography
+corresponding to each plane. {\it Important}: Obviously, you can not find each and every plane in the image or assign each pixel (like sky/tree) to a real plane so we are happy if the major planes (e.g., ground, buildings) are correctly segmented. It is of course fine if your code is so good that it can approximate smaller regions (like people) by planes, but that is not required.\\
+
+{\bf Step 2:} Produce a ``correct'' display of the planes in 3D. {\it Be careful}: If you take the images yourself with a camera, make sure that you do not have radial distortion. If you download images from the Web, be aware that images are often cropped thus causing problems in estimating $K$ sometimes (depending how you do it!).
+
+\subsection{Rules of the game}
+For {\bf Step 1}
+\begin{itemize}
+\item The plane segmentation should be automatic. You may use any technique you can
+think of: e.g. find homographies through RANSAC on feature points and go back to
+pixels to find regions; or reason about vanishing points to find the planes; or a combination of both.
+\item You need to implement your own math and algorithms to estimate the homographies
+and the regions but you may use existing code for any of the low-level operations like
+interest points, SIFT (or other descriptor), or line extraction, etc. (see section~\ref{sec:sugg})
+\end{itemize}
+For {\bf Step 2}
+\begin{itemize}
+\item Use whatever you want for the display as long as you display the points and the mapped regions in 3D and in 2D in different images. (see figure~\ref{fig:recon}). If you prefer, you can also submit a video or vrml files.
+\item Of course, the regions are used only for display; the objective of the problem is to recover
+the metric projection matrices (i.e., $K$, $E$, etc.) from the homographies and perhaps the
+vanishing points (depending how you do this).
+\item Since we want a correct metric representation, you will need some metric thing in the
+scene, like angles. For that, you are allowed to designate manually things that are
+orthogonal in 3D (e.g., ground plane and a facade, or two sets of lines, etc.). Make sure you submit clearly annotated images in your report. (see section~\ref{sec:tosubmit})
+\end{itemize}
+
+\subsection{Input Images}
+\label{inp1}
+Input images are provided in $\texttt{./images/input/}$ folder. Choose images based on these rules:
+\begin{itemize}
+\item One or more pairs of images from set $1\_\texttt{XXX.jpg}$.
+\item Two or more pairs of images from either of these sets: $2\_\texttt{XXX.jpg}$, $3\_\texttt{XXX.jpg}$ or $\texttt{aX.jpg}$.
+\item Two or more pairs of images captured/found by you.
+\end{itemize}
+
+\subsection{What you have to submit:}
+\label{sec:tosubmit}
+You should submit at least 5 pairs of images based on the rules mentioned in section~\ref{inp1}. The more images the better! Please follow instructions carefully:
+\begin{itemize}
+\item Input images
+\item Output images (and videos, if you prefer): Segmented planes in the image (color coded) and their reconstruction in 3D. Display of the annotations that you used for your algorithm, including the vanishing points if you use it in your method. (see figure~\ref{fig:recon})
+\item Description of your implementation (i.e., the algorithm you followed with relevant equations,
+what were the annotations used) and (most importantly) what problems were encountered (e.g., numerical issues, etc.). You should properly describe your method (couple of lines don't work!).
+\item Make sure you include {\it all intermediate steps with illustrations} to describe your algorithm.
+\item Make sure you include {\it all} your result images in the report.
+\item CODE (including readme/script on how to use it)
+\end{itemize}
+
+\subsection{Bonus (10 points, not mandatory): Augmented Reality \& Shadow casting}
+Given your 3D reconstruction, you could create a simple `augmented reality' by simulating a known object in the scene. First, assume the metric length of some element of the reconstructed scene. Then, use this to simulate a new object (e.g. a floating ball, get creative) in the scene. In order to show the interaction between the object and the planes, assume two light sources orthogonal to the planes, and simulate casting the shadow of the object to both planes. For example, see Figure~\ref{fig:geb}.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=.34\textwidth]{tmpimages/geb.jpg}
+  \caption{Shadow casting from the cover of ``Godel, Escher, Bach: An Eternal Golden Braid''} \label{fig:geb}
+  \end{figure}
+\begin{figure}[h!]
+\centering
+\begin{subfigure}[Example Inputs]
+{\includegraphics[width=0.4\textwidth]{tmpimages/3_1.jpg}
+\includegraphics[width=0.4\textwidth]{tmpimages/3_2.jpg}
+}
+\end{subfigure}
+\begin{subfigure}[Example Reconstructions]
+{\includegraphics[width=0.65\textwidth]{tmpimages/segrecon.jpg}
+\includegraphics[width=0.34\textwidth]{tmpimages/pointeg.jpg}
+}
+\end{subfigure}
+\caption{Few different example Output Images to be submitted for the reconstruction algorithm}
+\label{fig:recon}
+\end{figure}
+
+
+\subsection{Suggestions:}
+\label{sec:sugg}
+\begin{itemize}
+\item Note that, if you go back to the notes from the beginning of class, there are
+many different ways of doing this depending on which constraints you use
+on planes and lines and how you set up the problem. All of them are
+acceptable.
+
+\item As usual once you start working with pixels, Step 1 might be time
+consuming. It's perfectly fine if you start with Step 2 (i.e., use manually
+defined regions and corresponding homographies) to work out the math. And then apply the same using input from Step 1.
+
+\item For either steps, you may use existing code for estimating vanishing points
+from lines in the image, if you need that. Also, three different codes to find long lines are given in $\texttt{./code/lineCodes/}$ directory, if you need that.
+
+\item For the actual reconstruction, you will get most points if you use 3D {\bf planes} directly, i.e., draw the planes by deriving their equations from the homographies and then map.
+
+\item If that saves time, it is fine to share the examples of image pairs (but not the code!), which should be mentioned in your submission.
+\end{itemize}
+
+\subsection{What you {\it can not} do:}
+\begin{itemize}
+\item For the metric upgrade you should not assume 3D coordinates of any control points.
+\item You can not use Google Sketchup or equivalent.
+\end{itemize}
+
+\subsection{Tips:}
+\label{sec:helpercode}
+\begin{itemize}
+\item Make sure to keep ``sanity checks'' in your code while you are debugging, by checking an equation that you know should be true. (e.g., $l^TCm=0$). Keep such code commented when you submit, so that I can see and appreciate it!
+\item Normalize coordinates of points before doing anything. This is important!
+\item Remember the transformations that you are estimating are up to a scale.
+\item Keep in mind all the things Martial mentioned in class!
+\item Start early...
+\item Have fun!!
+\end{itemize}
+
+\end{document}
